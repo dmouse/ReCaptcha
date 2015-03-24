@@ -27,12 +27,12 @@ class ReCaptcha
     }
 
     public function bind(Request $request, $challenge = 'recaptcha_challenge_field', $response = 'recaptcha_response_field')
-    {
+    {   
         return $this->checkAnswer($request->getClientIp(), $request->request->get($challenge), $request->request->get($response));
-    }
+    }   
 
     public function checkAnswer($ip, $challenge, $response)
-    {
+    {   
         if ('' === trim($ip)) {
             throw new InvalidArgumentException(
                 'For security reasons, you must pass the remote ip to reCAPTCHA'
@@ -43,24 +43,23 @@ class ReCaptcha
             return new Response(false, 'incorrect-captcha-sol');
         }
 
-        $request = $this->client->post('/recaptcha/api/verify');
+        $request = $this->client->post('/recaptcha/api/siteverify');
         $request->addPostFields(array(
-            'privatekey' => $this->privateKey,
+            'secret' => $this->privateKey,
             'remoteip'   => $ip,
-            'challenge'  => $challenge,
-            'response'   => $response
+            'response'   => $challenge,
         ));
 
-        $response = $request->send();
-        $data = explode("\n", $response->getBody(true));
+        $response_api = $request->send();
+        $isValid = json_decode($response_api->getBody(true));
 
-        if ('true' === trim($data[0])) {
+        if ($isValid->success === true) {
             return new Response(true);
         }
 
         return new Response(false, isset($data[1]) ? $data[1] : null);
     }
-
+    
     public function getPublicKey()
     {
         return $this->publicKey;
